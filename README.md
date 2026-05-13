@@ -28,16 +28,21 @@ kalki-pattern-scorer      Worker API, deploys src/worker.js
 kalki-pattern-scorer-ui   Pages UI, publishes public/
 ```
 
-The Worker is already connected to GitHub. The Pages project currently shows `Git Provider: No`, so it is still a manual Wrangler deploy. To make Pages auto-sync from GitHub:
+The Pages project was created as a direct-upload project, so Cloudflare shows `No Git connection`. That is okay. This repo uses GitHub Actions to deploy both Cloudflare apps whenever `main` is pushed.
 
-1. Open Cloudflare Dashboard -> Workers & Pages -> `kalki-pattern-scorer-ui`.
-2. Connect Git repository: `srimanth87/kalki-pattern-scorer`.
-3. Production branch: `main`.
-4. Build command: leave blank.
-5. Build output directory: `public`.
-6. Save.
+Required GitHub repo secrets:
 
-After that, pushing to `main` will deploy the Pages UI automatically.
+```text
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID
+```
+
+After those are added in GitHub, pushing to `main` deploys:
+
+```text
+src/worker.js       -> kalki-pattern-scorer Worker
+public/index.html   -> kalki-pattern-scorer-ui Pages
+```
 
 ## Local Commands
 
@@ -49,7 +54,7 @@ npm run pages:deploy
 npm run deploy
 ```
 
-`npm run pages:deploy` is only the manual fallback. Once Pages is Git-connected, normal flow should be:
+`npm run pages:deploy` is only the manual fallback. Normal flow should be:
 
 ```bash
 git add .
