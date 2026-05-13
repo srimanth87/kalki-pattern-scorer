@@ -29,7 +29,7 @@ kalki-pattern-scorer      Worker API, deploys src/worker.js
 kalki-pattern-scorer-ui   Pages UI, publishes public/
 ```
 
-The Pages project was created as a direct-upload project, so Cloudflare shows `No Git connection`. That is okay. This repo uses GitHub Actions to deploy both Cloudflare apps whenever `main` is pushed.
+Cloudflare Pages is connected to GitHub through Cloudflare's own Pages build flow. This repo also uses GitHub Actions to deploy the Worker whenever `main` is pushed.
 
 Required GitHub repo secrets:
 
@@ -41,8 +41,8 @@ CLOUDFLARE_ACCOUNT_ID
 After those are added in GitHub, pushing to `main` deploys:
 
 ```text
-src/worker.js       -> kalki-pattern-scorer Worker
-public/index.html   -> kalki-pattern-scorer-ui Pages
+src/worker.js       -> kalki-pattern-scorer Worker, via GitHub Actions
+public/index.html   -> kalki-pattern-scorer-ui Pages, via Cloudflare Pages Git build
 ```
 
 Last GitHub Actions deploy test: 2026-05-13 14:07 EDT.
