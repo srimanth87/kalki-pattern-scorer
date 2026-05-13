@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-:root{--bg:#0a0c0f;--bg2:#0f1218;--card:#161b24;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#e8eaf0;--text2:#7a8499;--text3:#4a5268;--accent:#00d4ff;--green:#00e676;--red:#ff5252;--amber:#ffab40;--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;}
+:root{--bg:#0a0c0f;--bg2:#0f1218;--card:#161b24;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#e8eaf0;--text2:#7a8499;--text3:#4a5268;--accent:#00d4ff;--green:#00e676;--red:#ff5252;--amber:#ffab40;--purple:#b388ff;--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0;}
@@ -69,6 +69,7 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
 .pc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;}
 .pc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:4px;}
 .pc-val{font-family:var(--display);font-size:20px;font-weight:700;}
+.pc-sub{font-size:11px;margin-top:3px;font-weight:500;}
 .pv-cur{color:var(--accent);}.pv-tgt{color:var(--green);}.pv-res{color:var(--red);}.pv-sup{color:var(--amber);}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem;}
 @media(max-width:580px){.two-col{grid-template-columns:1fr;}}
@@ -98,33 +99,11 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
 .qg-a{color:var(--green);}.qg-b{color:var(--amber);}.qg-c{color:#ff8a65;}.qg-d{color:var(--red);}
 .q-empty{font-size:12px;color:var(--text3);text-align:center;padding:1.25rem;}
 .sec-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:.6rem;}
-.lock-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
-.lock-screen::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;}
-.lock-box{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:2.5rem 2rem;width:min(360px,100%);text-align:center;position:relative;z-index:1;}
-.lock-logo{width:52px;height:52px;border:1.5px solid var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:18px;color:var(--accent);margin:0 auto 1.25rem;}
-.lock-title{font-family:var(--display);font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;}
-.lock-sub{font-size:11px;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:1.75rem;}
-.lock-input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:.12em;padding:.72rem 1rem;text-align:center;outline:none;transition:border-color .2s;margin-bottom:.75rem;}
-.lock-input:focus{border-color:var(--accent);}
-.lock-btn{width:100%;height:42px;border-radius:8px;border:none;background:var(--accent);color:#000;font-family:var(--display);font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;transition:background .15s;}
-.lock-btn:hover{background:#33ddff;}
-.lock-err{font-size:12px;color:var(--red);margin-top:.6rem;min-height:18px;}
-.app-locked{display:none;}
+@keyframes shake{0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-8px);}40%,80%{transform:translateX(8px);}}
 </style>
 </head>
 <body>
-<div class="lock-screen" id="lockScreen">
-  <div class="lock-box">
-    <div class="lock-logo">K</div>
-    <div class="lock-title">Kalki Pattern Scorer</div>
-    <div class="lock-sub">Enter password to continue</div>
-    <input class="lock-input" id="lockInput" type="password" placeholder="Password" autocomplete="current-password"/>
-    <button class="lock-btn" id="lockBtn" type="button">Unlock</button>
-    <div class="lock-err" id="lockErr"></div>
-  </div>
-</div>
-
-<div class="page app-locked" id="mainApp">
+<div class="page">
   <div class="hdr">
     <div class="logo">K</div>
     <div class="hdr-text">
@@ -166,12 +145,13 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
         <div class="summary" id="summDisp">—</div>
       </div>
     </div>
-    <div class="sec-lbl">Key price levels</div>
+    <div class="sec-lbl">Trade plan</div>
     <div class="price-grid">
-      <div class="pc"><div class="pc-lbl">Current price</div><div class="pc-val pv-cur" id="pCur">—</div></div>
-      <div class="pc"><div class="pc-lbl">Target</div><div class="pc-val pv-tgt" id="pTgt">—</div></div>
-      <div class="pc"><div class="pc-lbl">Resistance</div><div class="pc-val pv-res" id="pRes">—</div></div>
-      <div class="pc"><div class="pc-lbl">Support</div><div class="pc-val pv-sup" id="pSup">—</div></div>
+      <div class="pc"><div class="pc-lbl">Entry (current)</div><div class="pc-val pv-cur" id="pCur">—</div></div>
+      <div class="pc"><div class="pc-lbl">Stop (support)</div><div class="pc-val pv-sup" id="pSup">—</div><div class="pc-sub" id="pStopPct">—</div></div>
+      <div class="pc"><div class="pc-lbl">T1 (resistance)</div><div class="pc-val pv-res" id="pRes">—</div><div class="pc-sub" id="pT1Pct">—</div></div>
+      <div class="pc"><div class="pc-lbl">T2 (target)</div><div class="pc-val pv-tgt" id="pTgt">—</div><div class="pc-sub" id="pT2Pct">—</div></div>
+      <div class="pc"><div class="pc-lbl">R:R Ratio</div><div class="pc-val" id="pRR" style="color:var(--purple)">—</div></div>
     </div>
     <div class="two-col">
       <div class="fc"><div class="fc-title fc-bull">▲ Bullish factors</div><div id="bullList"></div></div>
@@ -199,8 +179,8 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
 <script>
 // ── UPDATE THIS after deploying your Cloudflare Worker ──────────────────
 const WORKER_URL = 'https://kalki-pattern-scorer.srimanthgada87.workers.dev/analyze';
+const WORKER_SECRET = 'e2dc239c3c612507e1121c7d8282bac46a10277addbb5ff9';
 // ────────────────────────────────────────────────────────────────────────
-const SITE_PASSWORD_HASH = 'f1ee529ef49111208f1c1646c53c8c311c9f093fd7891c1b46d77e98210b018d';
 
 let queue=[],activeIdx=null,activeChart=null;
 function gc(g){if(!g)return 'ring-b';if(g==='A+'||g==='A')return 'ring-a';if(g==='B')return 'ring-b';if(g==='C')return 'ring-c';return 'ring-d';}
@@ -219,8 +199,8 @@ async function analyze(){
   setLoading(true,`Fetching ${tf==='1wk'?'weekly':'daily'} data for ${ticker}...`);
   try{
     setLoading(true,`Claude is analyzing ${ticker} chart pattern...`);
-    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker,timeframe:tf,note})});
-    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||err.error||`Worker error ${res.status}`);}
+    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Worker-Secret':WORKER_SECRET},body:JSON.stringify({ticker,timeframe:tf,note})});
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.error||`Worker error ${res.status}`);}
     const data=await res.json();
     if(!data.ok)throw new Error(data.error||'Unknown error');
     const item={ticker,tf,note,result:data.result};
@@ -245,10 +225,27 @@ function renderResult(item){
   const sm={forming:'b-forming',breakout:'b-breakout',confirmed:'b-confirmed',failed:'b-failed'};
   document.getElementById('bdgWrap').innerHTML=`<span class="badge ${sm[r.pattern_stage]||'b-forming'}">${r.pattern_stage||'—'}</span><span class="badge b-tf">${r.timeframe||item.tf}</span>`;
   document.getElementById('summDisp').textContent=r.summary||'';
+  const entry=Number(pc.current)||0;
+  const stop=Number(pc.support)||0;
+  const t1=Number(pc.resistance)||0;
+  const t2=Number(pc.target)||0;
+  const stopPct=entry>0?((stop-entry)/entry*100):0;
+  const t1Pct=entry>0?((t1-entry)/entry*100):0;
+  const t2Pct=entry>0?((t2-entry)/entry*100):0;
+  const risk=entry-stop;
+  const reward=t1-entry;
+  const rr=risk>0?(reward/risk):0;
   document.getElementById('pCur').textContent=fmt(pc.current);
-  document.getElementById('pTgt').textContent=fmt(pc.target);
-  document.getElementById('pRes').textContent=fmt(pc.resistance);
   document.getElementById('pSup').textContent=fmt(pc.support);
+  document.getElementById('pRes').textContent=fmt(pc.resistance);
+  document.getElementById('pTgt').textContent=fmt(pc.target);
+  document.getElementById('pStopPct').textContent=stop>0?stopPct.toFixed(1)+'%':'—';
+  document.getElementById('pStopPct').style.color='var(--red)';
+  document.getElementById('pT1Pct').textContent=t1>0?'+'+t1Pct.toFixed(1)+'%':'—';
+  document.getElementById('pT1Pct').style.color='var(--green)';
+  document.getElementById('pT2Pct').textContent=t2>0?'+'+t2Pct.toFixed(1)+'%':'—';
+  document.getElementById('pT2Pct').style.color='var(--green)';
+  document.getElementById('pRR').textContent=rr>0?rr.toFixed(1)+':1':'—';
   document.getElementById('bullList').innerHTML=(r.bullish_factors||[]).map(f=>`<div class="fi"><span class="fdot" style="background:var(--green)"></span><span>${f}</span></div>`).join('');
   document.getElementById('bearList').innerHTML=(r.risk_factors||[]).map(f=>`<div class="fi"><span class="fdot" style="background:var(--red)"></span><span>${f}</span></div>`).join('');
   document.getElementById('invTxt').textContent=r.invalidation||'—';
@@ -306,39 +303,6 @@ function renderQueue(){
 function loadItem(i){activeIdx=i;renderResult(queue[i]);renderQueue();document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}
 document.getElementById('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')analyze();});
 
-async function sha256Hex(value){
-  const buffer=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
-  return [...new Uint8Array(buffer)].map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-function unlockApp(){
-  sessionStorage.setItem('kalki_auth','1');
-  document.getElementById('lockScreen').style.display='none';
-  document.getElementById('mainApp').classList.remove('app-locked');
-  document.getElementById('ticker').focus();
-}
-
-async function checkPassword(){
-  const input=document.getElementById('lockInput');
-  const err=document.getElementById('lockErr');
-  const hash=await sha256Hex(input.value);
-  if(hash===SITE_PASSWORD_HASH){
-    unlockApp();
-    input.value='';
-    err.textContent='';
-    return;
-  }
-  err.textContent='Incorrect password';
-  input.value='';
-  input.focus();
-}
-
-document.addEventListener('DOMContentLoaded',()=>{
-  if(sessionStorage.getItem('kalki_auth')==='1') unlockApp();
-  document.getElementById('lockBtn').addEventListener('click',checkPassword);
-  document.getElementById('lockInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkPassword();});
-  document.getElementById('lockInput').focus();
-});
 </script>
 </body>
 </html>
