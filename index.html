@@ -32,6 +32,20 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
 .analyze-btn:hover{background:#33ddff;}
 .analyze-btn:active{transform:scale(.98);}
 .analyze-btn:disabled{background:var(--text3);cursor:not-allowed;}
+.settings-btn{height:38px;padding:0 .95rem;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer;white-space:nowrap;}
+.settings-btn:hover{border-color:var(--accent);color:var(--accent);}
+.settings-panel{display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);}
+.settings-panel.on{display:block;}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;}
+@media(max-width:720px){.settings-grid{grid-template-columns:1fr;}.settings-grid .analyze-btn{width:100%;}}
+.field-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:5px;}
+.set-in{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:0 10px;height:38px;outline:none;}
+.set-in:focus{border-color:var(--accent);}
+.set-row{display:flex;align-items:center;gap:8px;margin-top:.8rem;font-size:12px;color:var(--text2);}
+.set-row input{accent-color:var(--accent);}
+.set-status{font-size:11px;color:var(--text3);margin-top:.6rem;min-height:14px;}
+.set-status.ok{color:var(--green);}
+.set-status.bad{color:var(--red);}
 .loading{display:none;margin-top:.9rem;}
 .loading.on{display:block;}
 .loading-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;}
@@ -123,6 +137,22 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
       </select>
       <input class="note-in" id="note" placeholder="Alert note (optional) — e.g. cup and handle near 52w high"/>
       <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">Analyze ↗</button>
+      <button class="settings-btn" type="button" onclick="toggleSettings()">Settings</button>
+    </div>
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-grid">
+        <div>
+          <div class="field-lbl">Telegram bot token</div>
+          <input class="set-in" id="telegramBotToken" type="password" placeholder="123456:ABC..." autocomplete="off" spellcheck="false"/>
+        </div>
+        <div>
+          <div class="field-lbl">Telegram chat id</div>
+          <input class="set-in" id="telegramChatId" placeholder="123456789 or -100..." autocomplete="off" spellcheck="false"/>
+        </div>
+        <button class="analyze-btn" type="button" onclick="saveSettings()">Save</button>
+      </div>
+      <label class="set-row"><input id="telegramEnabled" type="checkbox"/> Send Telegram alert after each analysis</label>
+      <div class="set-status" id="settingsStatus"></div>
     </div>
     <div class="loading" id="loadingEl">
       <div class="loading-bar"><div class="loading-fill"></div></div>
@@ -177,15 +207,37 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
 </div>
 
 <script>
-const WORKER_URL = 'https://kalki-pattern-scorer.srimanthgada87.workers.dev/analyze';
+const WORKER_BASE_URL = 'https://kalki-pattern-scorer.srimanthgada87.workers.dev';
+const WORKER_URL = `${WORKER_BASE_URL}/analyze`;
+const TELEGRAM_URL = `${WORKER_BASE_URL}/telegram-alert`;
+const SETTINGS_KEY = 'kalkiPatternScorerSettings';
 
 let queue=[],activeIdx=null,activeChart=null;
 function gc(g){if(!g)return 'ring-b';if(g==='A+'||g==='A')return 'ring-a';if(g==='B')return 'ring-b';if(g==='C')return 'ring-c';return 'ring-d';}
 function qgc(g){if(!g)return 'qg-b';if(g==='A+'||g==='A')return 'qg-a';if(g==='B')return 'qg-b';if(g==='C')return 'qg-c';return 'qg-d';}
 function fmt(n){if(n==null)return '—';return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function pct(n){return `${n>=0?'+':''}${n.toFixed(1)}%`;}
 function setLoading(on,msg){document.getElementById('loadingEl').classList.toggle('on',on);document.getElementById('loadingTxt').textContent=msg||'Analyzing...';document.getElementById('analyzeBtn').disabled=on;}
 function showErr(msg){const e=document.getElementById('errBox');e.textContent=msg;e.classList.add('on');}
 function clearErr(){document.getElementById('errBox').classList.remove('on');}
+function getSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');}catch{return {};}}
+function setStatus(msg,type){const el=document.getElementById('settingsStatus');el.textContent=msg||'';el.className='set-status '+(type||'');}
+function toggleSettings(){document.getElementById('settingsPanel').classList.toggle('on');}
+function saveSettings(){
+  const settings={
+    telegramEnabled:document.getElementById('telegramEnabled').checked,
+    telegramBotToken:document.getElementById('telegramBotToken').value.trim(),
+    telegramChatId:document.getElementById('telegramChatId').value.trim(),
+  };
+  localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));
+  setStatus('Settings saved.', 'ok');
+}
+function loadSettings(){
+  const settings=getSettings();
+  document.getElementById('telegramEnabled').checked=!!settings.telegramEnabled;
+  document.getElementById('telegramBotToken').value=settings.telegramBotToken||'';
+  document.getElementById('telegramChatId').value=settings.telegramChatId||'';
+}
 
 async function analyze(){
   const ticker=document.getElementById('ticker').value.trim().toUpperCase();
@@ -204,6 +256,7 @@ async function analyze(){
     queue.unshift(item);activeIdx=0;
     setLoading(false);clearErr();
     renderResult(item);renderQueue();
+    sendTelegramAlert(item);
     document.getElementById('ticker').value='';document.getElementById('note').value='';
     document.getElementById('results').classList.add('on');
     document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
@@ -247,6 +300,52 @@ function renderResult(item){
   document.getElementById('bearList').innerHTML=(r.risk_factors||[]).map(f=>`<div class="fi"><span class="fdot" style="background:var(--red)"></span><span>${f}</span></div>`).join('');
   document.getElementById('invTxt').textContent=r.invalidation||'—';
   buildChart(item.ticker,r);
+}
+
+function buildTelegramMessage(item){
+  const r=item.result,pc=r.price_context||{};
+  const entry=Number(pc.current)||0;
+  const stop=Number(pc.support)||0;
+  const t1=Number(pc.resistance)||0;
+  const t2=Number(pc.target)||0;
+  const risk=entry-stop;
+  const rr=risk>0?(t1-entry)/risk:0;
+  const stopPct=entry>0?(stop-entry)/entry*100:0;
+  const t1Pct=entry>0?(t1-entry)/entry*100:0;
+  const t2Pct=entry>0?(t2-entry)/entry*100:0;
+  const reason=r.pattern||item.note||'Pattern setup';
+  const stamp=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
+  const when=stamp.replace(',', ' ·').replace(/, /g,' ');
+  return [
+    `⚡ ${item.ticker}`,
+    `📈 Entry:  ${fmt(entry)}`,
+    `🛑 Stop:   ${fmt(stop)} (${pct(stopPct)})`,
+    `🎯 T1:     ${fmt(t1)} (${pct(t1Pct)})`,
+    `🎯 T2:     ${fmt(t2)} (${pct(t2Pct)})`,
+    `📊 R:R:    ${rr>0?rr.toFixed(1):'—'}:1`,
+    `Reason : ${reason}`,
+    `⏰ ${when}`,
+    '⚡ Kalki Analysis Platform',
+  ].join('\n');
+}
+
+async function sendTelegramAlert(item){
+  const settings=getSettings();
+  if(!settings.telegramEnabled)return;
+  if(!settings.telegramBotToken||!settings.telegramChatId){
+    setStatus('Telegram is enabled, but bot token or chat id is missing.', 'bad');
+    return;
+  }
+  setStatus(`Sending Telegram alert for ${item.ticker}...`, '');
+  try{
+    const res=await fetch(TELEGRAM_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({botToken:settings.telegramBotToken,chatId:settings.telegramChatId,text:buildTelegramMessage(item)})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.ok)throw new Error(data.error||`Telegram error ${res.status}`);
+    setStatus(`Telegram alert sent for ${item.ticker}.`, 'ok');
+  }catch(err){
+    setStatus(`Telegram alert failed: ${err.message}`, 'bad');
+    showErr(`Telegram alert failed: ${err.message}`);
+  }
 }
 
 function buildChart(ticker,r){
@@ -299,6 +398,7 @@ function renderQueue(){
 }
 function loadItem(i){activeIdx=i;renderResult(queue[i]);renderQueue();document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}
 document.getElementById('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')analyze();});
+loadSettings();
 
 </script>
 </body>

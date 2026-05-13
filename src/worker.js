@@ -24,12 +24,17 @@ export default {
       return new Response('Method not allowed', { status: 405, headers: corsHeaders(corsOrigin) });
     }
 
-    const url = new URL(request.url);
-    if (url.pathname !== '/analyze') {
-      return new Response('Not found', { status: 404, headers: corsHeaders(corsOrigin) });
-    }
-
     try {
+      const url = new URL(request.url);
+
+      if (url.pathname === '/telegram-alert') {
+        return sendTelegramAlert(request, corsOrigin);
+      }
+
+      if (url.pathname !== '/analyze') {
+        return new Response('Not found', { status: 404, headers: corsHeaders(corsOrigin) });
+      }
+
       const body = await request.json();
       const { ticker, timeframe, note } = body;
 
@@ -83,7 +88,34 @@ function corsHeaders(origin) {
 
 function getCorsOrigin(origin) {
   if (!origin) return '*';
+  if (origin === 'null') return 'null';
   return ALLOWED_ORIGINS.some(allowed => origin === allowed || origin.startsWith(`${allowed}/`)) ? origin : ALLOWED_ORIGINS[0];
+}
+
+async function sendTelegramAlert(request, corsOrigin) {
+  const { botToken, chatId, text } = await request.json();
+
+  if (!botToken) return jsonResponse({ error: 'Telegram bot token is required' }, 400, corsOrigin);
+  if (!chatId) return jsonResponse({ error: 'Telegram chat id is required' }, 400, corsOrigin);
+  if (!text) return jsonResponse({ error: 'Telegram message text is required' }, 400, corsOrigin);
+
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      disable_web_page_preview: true,
+    }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    const description = data.description || `Telegram API error ${res.status}`;
+    return jsonResponse({ error: description }, res.ok ? 400 : res.status, corsOrigin);
+  }
+
+  return jsonResponse({ ok: true }, 200, corsOrigin);
 }
 
 async function fetchYahooChart(yahooUrl) {
