@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalki Pattern Scorer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{--bg:#0a0c0f;--bg2:#0f1218;--card:#161b24;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#e8eaf0;--text2:#7a8499;--text3:#4a5268;--accent:#00d4ff;--green:#00e676;--red:#ff5252;--amber:#ffab40;--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0;}
+.page{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+.hdr{display:flex;align-items:center;gap:12px;margin-bottom:2rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border);}
+.logo{width:40px;height:40px;border:1.5px solid var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:15px;color:var(--accent);flex-shrink:0;}
+.hdr-text h1{font-family:var(--display);font-size:19px;font-weight:700;}
+.hdr-text p{font-size:10px;color:var(--text3);margin-top:2px;letter-spacing:.07em;text-transform:uppercase;}
+.live-dot{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.panel{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;}
+.panel-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:.8rem;}
+.input-row{display:flex;gap:8px;flex-wrap:wrap;}
+.ticker-in{background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:.08em;padding:.5rem .9rem;width:130px;text-transform:uppercase;outline:none;transition:border-color .2s;height:38px;}
+.ticker-in:focus{border-color:var(--accent);}
+.ticker-in::placeholder{font-size:12px;font-weight:400;color:var(--text3);}
+select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;padding:0 10px;height:38px;outline:none;cursor:pointer;}
+.note-in{flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;padding:0 10px;height:38px;outline:none;}
+.note-in::placeholder{color:var(--text3);}
+.analyze-btn{height:38px;padding:0 1.4rem;border-radius:8px;border:none;background:var(--accent);color:#000;font-family:var(--display);font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;transition:background .15s,transform .1s;white-space:nowrap;}
+.analyze-btn:hover{background:#33ddff;}
+.analyze-btn:active{transform:scale(.98);}
+.analyze-btn:disabled{background:var(--text3);cursor:not-allowed;}
+.loading{display:none;margin-top:.9rem;}
+.loading.on{display:block;}
+.loading-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;}
+.loading-fill{height:100%;background:var(--accent);width:30%;animation:slide 1.1s ease-in-out infinite;}
+@keyframes slide{0%{transform:translateX(-100%);}100%{transform:translateX(400%);}}
+.loading-txt{font-size:11px;color:var(--text3);margin-top:6px;}
+.err-box{display:none;margin-top:.75rem;padding:.6rem 1rem;background:rgba(255,82,82,.08);border:1px solid rgba(255,82,82,.25);border-radius:8px;font-size:13px;color:var(--red);}
+.err-box.on{display:block;}
+#results{display:none;}
+#results.on{display:block;}
+.hero{display:grid;grid-template-columns:auto 1fr;gap:1.25rem;background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:1.4rem;margin-bottom:1rem;align-items:center;}
+@media(max-width:500px){.hero{grid-template-columns:1fr;}}
+.score-ring{width:100px;height:100px;border-radius:50%;border:3px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
+.ring-a{border-color:var(--green);background:rgba(0,230,118,.07);}
+.ring-b{border-color:var(--amber);background:rgba(255,171,64,.06);}
+.ring-c{border-color:#ff8a65;background:rgba(255,138,101,.05);}
+.ring-d{border-color:var(--red);background:rgba(255,82,82,.05);}
+.snum{font-family:var(--display);font-size:34px;font-weight:800;line-height:1;}
+.sdenom{font-size:11px;color:var(--text3);}
+.sgrade{font-family:var(--display);font-size:14px;font-weight:700;margin-top:2px;}
+.ring-a .snum,.ring-a .sgrade{color:var(--green);}
+.ring-b .snum,.ring-b .sgrade{color:var(--amber);}
+.ring-c .snum,.ring-c .sgrade{color:#ff8a65;}
+.ring-d .snum,.ring-d .sgrade{color:var(--red);}
+.ticker-disp{font-family:var(--display);font-size:28px;font-weight:800;color:var(--accent);letter-spacing:-1px;line-height:1;}
+.pattern-disp{font-size:15px;color:var(--text);margin-top:3px;}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+.badge{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 10px;border-radius:20px;}
+.b-forming{background:rgba(255,171,64,.13);color:var(--amber);border:1px solid rgba(255,171,64,.28);}
+.b-breakout,.b-confirmed{background:rgba(0,230,118,.11);color:var(--green);border:1px solid rgba(0,230,118,.28);}
+.b-failed{background:rgba(255,82,82,.11);color:var(--red);border:1px solid rgba(255,82,82,.28);}
+.b-tf{background:rgba(255,255,255,.05);color:var(--text3);border:1px solid var(--border2);}
+.summary{margin-top:10px;font-size:13px;color:var(--text2);line-height:1.7;}
+.price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1rem;}
+.pc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;}
+.pc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:4px;}
+.pc-val{font-family:var(--display);font-size:20px;font-weight:700;}
+.pv-cur{color:var(--accent);}.pv-tgt{color:var(--green);}.pv-res{color:var(--red);}.pv-sup{color:var(--amber);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem;}
+@media(max-width:580px){.two-col{grid-template-columns:1fr;}}
+.fc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;}
+.fc-title{font-size:10px;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px;}
+.fc-bull{color:var(--green);}.fc-bear{color:var(--red);}
+.fi{display:flex;gap:7px;font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px;}
+.fdot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.inv{background:rgba(255,82,82,.05);border:1px solid rgba(255,82,82,.2);border-radius:10px;padding:.9rem 1rem;margin-bottom:1rem;}
+.inv-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--red);margin-bottom:5px;font-weight:500;}
+.inv-txt{font-size:13px;color:var(--text2);line-height:1.6;}
+.chart-card{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;}
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;flex-wrap:wrap;gap:8px;}
+.chart-ttl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--text3);}
+.li{display:flex;align-items:center;gap:5px;}
+.ll{width:18px;height:2px;border-radius:1px;}
+.chart-wrap{position:relative;width:100%;height:320px;}
+.q-section{margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem;}
+.q-title{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:.75rem;}
+.q-item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 13px;cursor:pointer;transition:border-color .15s;margin-bottom:5px;}
+.q-item:hover{border-color:var(--border2);}
+.q-item.q-active{border-color:var(--accent);}
+.q-tk{font-family:var(--display);font-size:14px;font-weight:700;color:var(--accent);min-width:58px;}
+.q-pat{font-size:12px;color:var(--text3);flex:1;}
+.q-grade{font-family:var(--display);font-size:14px;font-weight:700;}
+.qg-a{color:var(--green);}.qg-b{color:var(--amber);}.qg-c{color:#ff8a65;}.qg-d{color:var(--red);}
+.q-empty{font-size:12px;color:var(--text3);text-align:center;padding:1.25rem;}
+.sec-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:.6rem;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <div class="logo">K</div>
+    <div class="hdr-text">
+      <h1>Kalki Pattern Scorer</h1>
+      <p>AI-powered chart pattern recognition &amp; grading</p>
+    </div>
+    <div class="live-dot"><span class="dot"></span>live · claude ai</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-lbl">Enter ticker to analyze</div>
+    <div class="input-row">
+      <input class="ticker-in" id="ticker" placeholder="AAPL" maxlength="10" autocomplete="off" spellcheck="false"/>
+      <select id="tf">
+        <option value="1d">Daily (6mo)</option>
+        <option value="1wk">Weekly (2yr)</option>
+      </select>
+      <input class="note-in" id="note" placeholder="Alert note (optional) — e.g. cup and handle near 52w high"/>
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">Analyze ↗</button>
+    </div>
+    <div class="loading" id="loadingEl">
+      <div class="loading-bar"><div class="loading-fill"></div></div>
+      <div class="loading-txt" id="loadingTxt">Analyzing...</div>
+    </div>
+    <div class="err-box" id="errBox"></div>
+  </div>
+
+  <div id="results">
+    <div class="hero">
+      <div class="score-ring" id="scoreRing">
+        <span class="snum" id="sNum">—</span>
+        <span class="sdenom">/10</span>
+        <span class="sgrade" id="sGrade">—</span>
+      </div>
+      <div>
+        <div class="ticker-disp" id="tkDisp">—</div>
+        <div class="pattern-disp" id="patDisp">—</div>
+        <div class="badges" id="bdgWrap"></div>
+        <div class="summary" id="summDisp">—</div>
+      </div>
+    </div>
+    <div class="sec-lbl">Key price levels</div>
+    <div class="price-grid">
+      <div class="pc"><div class="pc-lbl">Current price</div><div class="pc-val pv-cur" id="pCur">—</div></div>
+      <div class="pc"><div class="pc-lbl">Target</div><div class="pc-val pv-tgt" id="pTgt">—</div></div>
+      <div class="pc"><div class="pc-lbl">Resistance</div><div class="pc-val pv-res" id="pRes">—</div></div>
+      <div class="pc"><div class="pc-lbl">Support</div><div class="pc-val pv-sup" id="pSup">—</div></div>
+    </div>
+    <div class="two-col">
+      <div class="fc"><div class="fc-title fc-bull">▲ Bullish factors</div><div id="bullList"></div></div>
+      <div class="fc"><div class="fc-title fc-bear">▼ Risk factors</div><div id="bearList"></div></div>
+    </div>
+    <div class="inv">
+      <div class="inv-lbl">⚠ Invalidation</div>
+      <div class="inv-txt" id="invTxt">—</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-hdr">
+        <div class="chart-ttl" id="chartTtl">Pattern diagram</div>
+        <div class="legend" id="lgnd"></div>
+      </div>
+      <div class="chart-wrap"><canvas id="pChart" role="img" aria-label="Pattern diagram"></canvas></div>
+    </div>
+  </div>
+
+  <div class="q-section">
+    <div class="q-title">Analysis history</div>
+    <div id="qGrid"><div class="q-empty">No tickers analyzed yet</div></div>
+  </div>
+</div>
+
+<script>
+// ── UPDATE THIS after deploying your Cloudflare Worker ──────────────────
+const WORKER_URL = 'https://kalki-pattern-scorer.srimanthgada87.workers.dev/analyze';
+// ────────────────────────────────────────────────────────────────────────
+
+let queue=[],activeIdx=null,activeChart=null;
+function gc(g){if(!g)return 'ring-b';if(g==='A+'||g==='A')return 'ring-a';if(g==='B')return 'ring-b';if(g==='C')return 'ring-c';return 'ring-d';}
+function qgc(g){if(!g)return 'qg-b';if(g==='A+'||g==='A')return 'qg-a';if(g==='B')return 'qg-b';if(g==='C')return 'qg-c';return 'qg-d';}
+function fmt(n){if(n==null)return '—';return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function setLoading(on,msg){document.getElementById('loadingEl').classList.toggle('on',on);document.getElementById('loadingTxt').textContent=msg||'Analyzing...';document.getElementById('analyzeBtn').disabled=on;}
+function showErr(msg){const e=document.getElementById('errBox');e.textContent=msg;e.classList.add('on');}
+function clearErr(){document.getElementById('errBox').classList.remove('on');}
+
+async function analyze(){
+  const ticker=document.getElementById('ticker').value.trim().toUpperCase();
+  const tf=document.getElementById('tf').value;
+  const note=document.getElementById('note').value.trim();
+  if(!ticker){showErr('Enter a ticker symbol.');return;}
+  clearErr();
+  setLoading(true,`Fetching ${tf==='1wk'?'weekly':'daily'} data for ${ticker}...`);
+  try{
+    setLoading(true,`Claude is analyzing ${ticker} chart pattern...`);
+    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker,timeframe:tf,note})});
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.error||`Worker error ${res.status}`);}
+    const data=await res.json();
+    if(!data.ok)throw new Error(data.error||'Unknown error');
+    const item={ticker,tf,note,result:data.result};
+    queue.unshift(item);activeIdx=0;
+    setLoading(false);clearErr();
+    renderResult(item);renderQueue();
+    document.getElementById('ticker').value='';document.getElementById('note').value='';
+    document.getElementById('results').classList.add('on');
+    document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(err){setLoading(false);showErr(err.message);}
+}
+
+function renderResult(item){
+  const r=item.result,pc=r.price_context||{};
+  document.getElementById('results').classList.add('on');
+  const ring=document.getElementById('scoreRing');
+  ring.className='score-ring '+gc(r.grade);
+  document.getElementById('sNum').textContent=r.score??'—';
+  document.getElementById('sGrade').textContent=r.grade||'—';
+  document.getElementById('tkDisp').textContent=item.ticker;
+  document.getElementById('patDisp').textContent=r.pattern||'—';
+  const sm={forming:'b-forming',breakout:'b-breakout',confirmed:'b-confirmed',failed:'b-failed'};
+  document.getElementById('bdgWrap').innerHTML=`<span class="badge ${sm[r.pattern_stage]||'b-forming'}">${r.pattern_stage||'—'}</span><span class="badge b-tf">${r.timeframe||item.tf}</span>`;
+  document.getElementById('summDisp').textContent=r.summary||'';
+  document.getElementById('pCur').textContent=fmt(pc.current);
+  document.getElementById('pTgt').textContent=fmt(pc.target);
+  document.getElementById('pRes').textContent=fmt(pc.resistance);
+  document.getElementById('pSup').textContent=fmt(pc.support);
+  document.getElementById('bullList').innerHTML=(r.bullish_factors||[]).map(f=>`<div class="fi"><span class="fdot" style="background:var(--green)"></span><span>${f}</span></div>`).join('');
+  document.getElementById('bearList').innerHTML=(r.risk_factors||[]).map(f=>`<div class="fi"><span class="fdot" style="background:var(--red)"></span><span>${f}</span></div>`).join('');
+  document.getElementById('invTxt').textContent=r.invalidation||'—';
+  buildChart(item.ticker,r);
+}
+
+function buildChart(ticker,r){
+  const pc=r.price_context||{};
+  const cur=Number(pc.current)||100,sup=Number(pc.support)||cur*.85,res=Number(pc.resistance)||cur*1.15,tgt=Number(pc.target)||cur*1.25;
+  const pat=(r.pattern||'').toLowerCase(),n=30;
+  const labels=Array.from({length:n},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(n-1-i)*5);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});});
+  let prices=[];
+  if(pat.includes('cup')){const left=res*.94,bot=sup*1.02;for(let i=0;i<n;i++){if(i<n*.38)prices.push(left-(left-bot)*(i/(n*.38)));else if(i<n*.72){const t=(i-n*.38)/(n*.34);prices.push(bot+(res*.93-bot)*t);}else{const t=(i-n*.72)/(n*.28);prices.push(res*.93-(res*.93-cur)*t);}}}
+  else if(pat.includes('megaphone')||pat.includes('broadening')){const mid=(sup+res)/2;for(let i=0;i<n;i++){const t=i/(n-1),amp=(res-sup)*.28*(.4+t*.6);prices.push(mid+Math.sin(i*.65)*amp+(cur-mid)*t*.5);}}
+  else if(pat.includes('head')||pat.includes('shoulder')){const pts=[sup,res*.88,sup*1.06,res,sup*1.06,res*.88,sup,cur];for(let i=0;i<n;i++){const s=(pts.length-1)*i/(n-1),si=Math.floor(s),t=s-si;prices.push(pts[Math.min(si,pts.length-1)]*(1-t)+pts[Math.min(si+1,pts.length-1)]*t);}}
+  else if(pat.includes('flag')||pat.includes('pennant')){for(let i=0;i<n;i++){if(i<n*.45)prices.push(sup+(res-sup)*(i/(n*.45)));else{const t=(i-n*.45)/(n*.55),rng=(res-sup)*.14;prices.push(res-rng*t+Math.sin(i*1.3)*rng*.4);}}}
+  else if(pat.includes('triangle')||pat.includes('wedge')){const mid=(sup+res)/2;for(let i=0;i<n;i++){const t=i/(n-1),rng=(res-sup)*(1-t*.65);prices.push(mid+Math.sin(i*.9)*rng*.42);}}
+  else if(pat.includes('base')||pat.includes('reversal')||pat.includes('bottom')||pat.includes('gap')){for(let i=0;i<n;i++){if(i<n*.18)prices.push(res*.92-(res*.92-sup)*(i/(n*.18)));else if(i<n*.68)prices.push(sup*1.03+Math.sin(i*.45)*sup*.06);else{const t=(i-n*.68)/(n*.32);prices.push(sup+(cur-sup)*t);}}}
+  else{for(let i=0;i<n;i++){const t=i/(n-1);prices.push(sup+(cur-sup)*t+(Math.random()-.45)*(res-sup)*.06);}}
+  prices[n-1]=cur;prices=prices.map(p=>Math.round(p*100)/100);
+  const rArr=Array(n).fill(res),sArr=Array(n).fill(sup),tArr=Array(n).fill(null);tArr[n-1]=tgt;tArr[n-4]=cur;
+  if(activeChart){activeChart.destroy();activeChart=null;}
+  activeChart=new Chart(document.getElementById('pChart'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:ticker,data:prices,borderColor:'#00d4ff',borderWidth:2.5,pointRadius:prices.map((_,i)=>i===n-1?5:0),pointBackgroundColor:'#00d4ff',tension:.35,fill:false,order:1},
+      {label:'Resistance',data:rArr,borderColor:'#ff5252',borderWidth:1.5,borderDash:[6,4],pointRadius:0,tension:0,fill:false,order:2},
+      {label:'Support',data:sArr,borderColor:'#00e676',borderWidth:1.5,borderDash:[6,4],pointRadius:0,tension:0,fill:false,order:2},
+      {label:'Target',data:tArr,borderColor:'#ffab40',borderWidth:1.5,borderDash:[3,3],pointRadius:0,tension:0,fill:false,spanGaps:true,order:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#161b24',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#7a8499',bodyColor:'#e8eaf0',callbacks:{label:ctx=>ctx.parsed.y!=null?`${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`:null,filter:item=>item.parsed.y!=null}}},
+      scales:{x:{ticks:{color:'#4a5268',font:{family:"'JetBrains Mono'",size:10},maxRotation:45,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,.03)'}},y:{ticks:{color:'#4a5268',font:{family:"'JetBrains Mono'",size:10},callback:v=>'$'+Number(v).toLocaleString()},grid:{color:'rgba(255,255,255,.035)'}}}},
+    plugins:[{id:'lbl',afterDraw(chart){
+      const{ctx,chartArea:{left,right},scales:{y}}=chart;
+      ctx.save();ctx.font="500 10px 'JetBrains Mono'";ctx.textBaseline='middle';ctx.textAlign='right';
+      ctx.fillStyle='#ff5252';ctx.fillText('res '+fmt(res),right-4,y.getPixelForValue(res)-10);
+      ctx.fillStyle='#00e676';ctx.fillText('sup '+fmt(sup),right-4,y.getPixelForValue(sup)+10);
+      ctx.fillStyle='#ffab40';ctx.fillText('tgt '+fmt(tgt),right-4,y.getPixelForValue(tgt)-10);
+      ctx.fillStyle='#00d4ff';ctx.fillText(fmt(cur),right-4,y.getPixelForValue(cur)-10);
+      ctx.font="700 11px 'JetBrains Mono'";ctx.fillStyle='rgba(255,255,255,.06)';ctx.textAlign='center';
+      ctx.fillText((r.pattern||'').toUpperCase(),(left+right)/2,y.getPixelForValue(Math.min(...prices.filter(Boolean))*.984));
+      ctx.restore();
+    }}]
+  });
+  document.getElementById('lgnd').innerHTML=`<div class="li"><div class="ll" style="background:#00d4ff"></div>${ticker}</div><div class="li"><div class="ll" style="border-top:2px dashed #ff5252;background:none"></div>Resistance</div><div class="li"><div class="ll" style="border-top:2px dashed #00e676;background:none"></div>Support</div><div class="li"><div class="ll" style="border-top:2px dashed #ffab40;background:none"></div>Target</div>`;
+  document.getElementById('chartTtl').textContent=`${ticker} · ${r.pattern||'Pattern'} · ${r.timeframe||'daily'}`;
+}
+
+function renderQueue(){
+  const el=document.getElementById('qGrid');
+  if(!queue.length){el.innerHTML='<div class="q-empty">No tickers analyzed yet</div>';return;}
+  el.innerHTML=queue.map((item,i)=>`<div class="q-item ${i===activeIdx?'q-active':''}" onclick="loadItem(${i})"><span class="q-tk">${item.ticker}</span><span class="q-pat">${item.result.pattern||'?'} · ${item.result.pattern_stage||''}</span><span class="q-grade ${qgc(item.result.grade)}">${item.result.grade} ${item.result.score}/10</span></div>`).join('');
+}
+function loadItem(i){activeIdx=i;renderResult(queue[i]);renderQueue();document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}
+document.getElementById('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')analyze();});
+</script>
+</body>
+</html>
