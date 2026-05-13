@@ -98,7 +98,6 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
 .qg-a{color:var(--green);}.qg-b{color:var(--amber);}.qg-c{color:#ff8a65;}.qg-d{color:var(--red);}
 .q-empty{font-size:12px;color:var(--text3);text-align:center;padding:1.25rem;}
 .sec-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:.6rem;}
-@keyframes shake{0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-8px);}40%,80%{transform:translateX(8px);}}
 </style>
 </head>
 <body>
@@ -283,7 +282,6 @@ function renderQueue(){
 }
 function loadItem(i){activeIdx=i;renderResult(queue[i]);renderQueue();document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}
 document.getElementById('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')analyze();});
-
 </script>
 </body>
 </html>
