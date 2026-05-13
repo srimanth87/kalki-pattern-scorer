@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "check": "node --check src/worker.js",
     "dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
     "pages:deploy": "wrangler pages deploy public --project-name kalki-pattern-scorer-ui --commit-dirty=true",
