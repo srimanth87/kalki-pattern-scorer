@@ -217,6 +217,7 @@ function gc(g){if(!g)return 'ring-b';if(g==='A+'||g==='A')return 'ring-a';if(g==
 function qgc(g){if(!g)return 'qg-b';if(g==='A+'||g==='A')return 'qg-a';if(g==='B')return 'qg-b';if(g==='C')return 'qg-c';return 'qg-d';}
 function fmt(n){if(n==null)return '—';return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function pct(n){return `${n>=0?'+':''}${n.toFixed(1)}%`;}
+function htmlEscape(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function setLoading(on,msg){document.getElementById('loadingEl').classList.toggle('on',on);document.getElementById('loadingTxt').textContent=msg||'Analyzing...';document.getElementById('analyzeBtn').disabled=on;}
 function showErr(msg){const e=document.getElementById('errBox');e.textContent=msg;e.classList.add('on');}
 function clearErr(){document.getElementById('errBox').classList.remove('on');}
@@ -316,7 +317,7 @@ function buildTelegramMessage(item){
   const stamp=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
   const when=stamp.replace(',', ' ·').replace(/, /g,' ');
   return [
-    `⚡ ${item.ticker}`,
+    `⚡ <b>${htmlEscape(item.ticker)}</b>`,
     `🏆 Grade:  ${r.grade||'—'} · Score: ${r.score??'—'}/10`,
     `📈 Entry:  ${fmt(entry)}`,
     `🛑 Stop:   ${fmt(stop)} (${pct(stopPct)})`,
