@@ -98,10 +98,33 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
 .qg-a{color:var(--green);}.qg-b{color:var(--amber);}.qg-c{color:#ff8a65;}.qg-d{color:var(--red);}
 .q-empty{font-size:12px;color:var(--text3);text-align:center;padding:1.25rem;}
 .sec-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:.6rem;}
+.lock-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
+.lock-screen::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;}
+.lock-box{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:2.5rem 2rem;width:min(360px,100%);text-align:center;position:relative;z-index:1;}
+.lock-logo{width:52px;height:52px;border:1.5px solid var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:18px;color:var(--accent);margin:0 auto 1.25rem;}
+.lock-title{font-family:var(--display);font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.lock-sub{font-size:11px;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:1.75rem;}
+.lock-input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:.12em;padding:.72rem 1rem;text-align:center;outline:none;transition:border-color .2s;margin-bottom:.75rem;}
+.lock-input:focus{border-color:var(--accent);}
+.lock-btn{width:100%;height:42px;border-radius:8px;border:none;background:var(--accent);color:#000;font-family:var(--display);font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;transition:background .15s;}
+.lock-btn:hover{background:#33ddff;}
+.lock-err{font-size:12px;color:var(--red);margin-top:.6rem;min-height:18px;}
+.app-locked{display:none;}
 </style>
 </head>
 <body>
-<div class="page">
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-logo">K</div>
+    <div class="lock-title">Kalki Pattern Scorer</div>
+    <div class="lock-sub">Enter password to continue</div>
+    <input class="lock-input" id="lockInput" type="password" placeholder="Password" autocomplete="current-password"/>
+    <button class="lock-btn" id="lockBtn" type="button">Unlock</button>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
+<div class="page app-locked" id="mainApp">
   <div class="hdr">
     <div class="logo">K</div>
     <div class="hdr-text">
@@ -177,6 +200,7 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
 // ── UPDATE THIS after deploying your Cloudflare Worker ──────────────────
 const WORKER_URL = 'https://kalki-pattern-scorer.srimanthgada87.workers.dev/analyze';
 // ────────────────────────────────────────────────────────────────────────
+const SITE_PASSWORD_HASH = 'f1ee529ef49111208f1c1646c53c8c311c9f093fd7891c1b46d77e98210b018d';
 
 let queue=[],activeIdx=null,activeChart=null;
 function gc(g){if(!g)return 'ring-b';if(g==='A+'||g==='A')return 'ring-a';if(g==='B')return 'ring-b';if(g==='C')return 'ring-c';return 'ring-d';}
@@ -281,6 +305,40 @@ function renderQueue(){
 }
 function loadItem(i){activeIdx=i;renderResult(queue[i]);renderQueue();document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}
 document.getElementById('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')analyze();});
+
+async function sha256Hex(value){
+  const buffer=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
+  return [...new Uint8Array(buffer)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function unlockApp(){
+  sessionStorage.setItem('kalki_auth','1');
+  document.getElementById('lockScreen').style.display='none';
+  document.getElementById('mainApp').classList.remove('app-locked');
+  document.getElementById('ticker').focus();
+}
+
+async function checkPassword(){
+  const input=document.getElementById('lockInput');
+  const err=document.getElementById('lockErr');
+  const hash=await sha256Hex(input.value);
+  if(hash===SITE_PASSWORD_HASH){
+    unlockApp();
+    input.value='';
+    err.textContent='';
+    return;
+  }
+  err.textContent='Incorrect password';
+  input.value='';
+  input.focus();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(sessionStorage.getItem('kalki_auth')==='1') unlockApp();
+  document.getElementById('lockBtn').addEventListener('click',checkPassword);
+  document.getElementById('lockInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkPassword();});
+  document.getElementById('lockInput').focus();
+});
 </script>
 </body>
 </html>
