@@ -196,7 +196,7 @@ async function analyze(){
   try{
     setLoading(true,`Claude is analyzing ${ticker} chart pattern...`);
     const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker,timeframe:tf,note})});
-    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.error||`Worker error ${res.status}`);}
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||err.error||`Worker error ${res.status}`);}
     const data=await res.json();
     if(!data.ok)throw new Error(data.error||'Unknown error');
     const item={ticker,tf,note,result:data.result};
