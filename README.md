@@ -11,10 +11,11 @@ One repo for the Kalki Pattern Scorer Cloudflare app.
 ## Source Of Truth
 
 ```text
-public/index.html   Cloudflare Pages UI
-src/worker.js       Cloudflare Worker API
-wrangler.toml       Cloudflare config for Worker and Pages output
-index.html          Redirect only, kept for GitHub/root visitors
+public/index.html    Cloudflare Pages UI
+src/worker.js        Cloudflare Worker API
+wrangler.toml        Worker config
+wrangler.pages.toml  Pages config
+index.html           Redirect only, kept for GitHub/root visitors
 ```
 
 Do not edit the root `index.html` for the app UI. The real UI is `public/index.html`.

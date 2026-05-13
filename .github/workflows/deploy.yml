@@ -34,7 +34,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy Pages UI
-        run: npx wrangler pages deploy public --project-name kalki-pattern-scorer-ui --branch main
+        run: npx wrangler pages deploy public --project-name kalki-pattern-scorer-ui --branch main --config wrangler.pages.toml
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
