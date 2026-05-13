@@ -54,7 +54,9 @@ Chart data JSON:
 ${JSON.stringify(chart)}
 
 JSON structure to return:
-{"pattern":"<Cup and Handle|Head and Shoulders|Megaphone|Bull Flag|Ascending Triangle|Base Breakout|Double Bottom|Flat Base|Descending Channel|Earnings Gap Breakout|etc>","pattern_stage":"forming|breakout|confirmed|failed","timeframe":"${tfLabel}","score":<1-10>,"grade":"A+|A|B|C|D","price_context":{"current":<num>,"resistance":<num>,"support":<num>,"target":<num>},"bullish_factors":["...","...","..."],"risk_factors":["...","..."],"summary":"2-3 sentences on setup quality and what to watch","invalidation":"one sentence on what invalidates this setup"}`;
+{"pattern":"<Cup and Handle|Head and Shoulders|Megaphone|Bull Flag|Ascending Triangle|Base Breakout|Double Bottom|Flat Base|Descending Channel|Earnings Gap Breakout|etc>","pattern_stage":"forming|breakout|confirmed|failed","timeframe":"${tfLabel}","score":<1-10>,"grade":"A+|A|B|C|D","price_context":{"current":<num>,"resistance":<num>,"support":<num>,"target":<num>},"bullish_factors":["...","...","..."],"risk_factors":["...","..."],"summary":"2-3 sentences on setup quality and what to watch","invalidation":"one sentence on what invalidates this setup"}
+
+Rules for price_context: current must be the latest close/current market price. support MUST be below current. resistance MUST be above current. target MUST be above resistance. If price already broke a prior resistance, do not use that old resistance as resistance; choose the next upside resistance or measured move target.`;
 
       const data = await callAnthropic(env, prompt);
       const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
@@ -62,7 +64,7 @@ JSON structure to return:
       const match = clean.match(/\{[\s\S]*\}/);
       if (!match) return jsonResponse({ error: 'Could not parse AI response', raw: text }, 500, corsOrigin);
 
-      const result = JSON.parse(match[0]);
+      const result = normalizeAnalysisResult(JSON.parse(match[0]), chart);
       return jsonResponse({ ok: true, result }, 200, corsOrigin);
 
     } catch (err) {
@@ -208,4 +210,53 @@ function round(value) {
 
 function unique(values) {
   return [...new Set(values)];
+}
+
+function normalizeAnalysisResult(result, chart) {
+  const candles = chart.candles || [];
+  const last = candles[candles.length - 1] || {};
+  const recent = candles.slice(-60);
+  const pc = result.price_context || {};
+  const current = positiveNumber(pc.current) || positiveNumber(chart.current) || positiveNumber(last.c);
+  if (!current) {
+    result.price_context = pc;
+    return result;
+  }
+
+  const highsAbove = uniqueNumbers(recent.map(c => c.h).filter(v => v > current * 1.002)).sort((a, b) => a - b);
+  const lowsBelow = uniqueNumbers(recent.map(c => c.l).filter(v => v < current * 0.998)).sort((a, b) => b - a);
+
+  const support = positiveNumber(pc.support) && pc.support < current
+    ? pc.support
+    : lowsBelow[0] || current * 0.92;
+
+  let resistance = positiveNumber(pc.resistance) && pc.resistance > current
+    ? pc.resistance
+    : highsAbove[0];
+
+  if (!resistance || resistance <= current) {
+    const riskPct = Math.max((current - support) / current, 0.04);
+    resistance = current * (1 + Math.max(riskPct * 1.5, 0.06));
+  }
+
+  let target = positiveNumber(pc.target) && pc.target > resistance
+    ? pc.target
+    : resistance + Math.max(resistance - support, current * 0.06);
+
+  result.price_context = {
+    current: round(current),
+    resistance: round(resistance),
+    support: round(support),
+    target: round(target),
+  };
+
+  return result;
+}
+
+function positiveNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function uniqueNumbers(values) {
+  return [...new Set(values.filter(v => typeof v === 'number' && Number.isFinite(v)).map(v => Math.round(v * 100) / 100))];
 }
