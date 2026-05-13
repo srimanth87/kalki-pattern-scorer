@@ -313,17 +313,16 @@ function buildTelegramMessage(item){
   const stopPct=entry>0?(stop-entry)/entry*100:0;
   const t1Pct=entry>0?(t1-entry)/entry*100:0;
   const t2Pct=entry>0?(t2-entry)/entry*100:0;
-  const reason=r.pattern||item.note||'Pattern setup';
   const stamp=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
   const when=stamp.replace(',', ' ·').replace(/, /g,' ');
   return [
     `⚡ ${item.ticker}`,
+    `🏆 Grade:  ${r.grade||'—'} · Score: ${r.score??'—'}/10`,
     `📈 Entry:  ${fmt(entry)}`,
     `🛑 Stop:   ${fmt(stop)} (${pct(stopPct)})`,
     `🎯 T1:     ${fmt(t1)} (${pct(t1Pct)})`,
     `🎯 T2:     ${fmt(t2)} (${pct(t2Pct)})`,
     `📊 R:R:    ${rr>0?rr.toFixed(1):'—'}:1`,
-    `Reason : ${reason}`,
     `⏰ ${when}`,
     '⚡ Kalki Analysis Platform',
   ].join('\n');
