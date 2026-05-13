@@ -175,8 +175,7 @@ select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;co
 
 <script>
 // ── UPDATE THIS after deploying your Cloudflare Worker ──────────────────
-const WORKER_URL = 'REPLACE_WITH_WORKER_URL/analyze';
-const WORKER_SECRET = 'e2dc239c3c612507e1121c7d8282bac46a10277addbb5ff9';
+const WORKER_URL = 'https://kalki-pattern-scorer.srimanthgada87.workers.dev/analyze';
 // ────────────────────────────────────────────────────────────────────────
 
 let queue=[],activeIdx=null,activeChart=null;
@@ -196,8 +195,8 @@ async function analyze(){
   setLoading(true,`Fetching ${tf==='1wk'?'weekly':'daily'} data for ${ticker}...`);
   try{
     setLoading(true,`Claude is analyzing ${ticker} chart pattern...`);
-    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Worker-Secret':WORKER_SECRET},body:JSON.stringify({ticker,timeframe:tf,note})});
-    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.error||`Worker error ${res.status}`);}
+    const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker,timeframe:tf,note})});
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||err.error||`Worker error ${res.status}`);}
     const data=await res.json();
     if(!data.ok)throw new Error(data.error||'Unknown error');
     const item={ticker,tf,note,result:data.result};
