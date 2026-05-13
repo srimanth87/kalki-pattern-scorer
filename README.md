@@ -44,6 +44,8 @@ src/worker.js       -> kalki-pattern-scorer Worker
 public/index.html   -> kalki-pattern-scorer-ui Pages
 ```
 
+Last GitHub Actions deploy test: 2026-05-13 14:07 EDT.
+
 ## Local Commands
 
 ```bash
