@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "worker:deploy": "wrangler deploy",
+    "pages:deploy": "wrangler pages deploy public --project-name kalki-pattern-scorer-ui --commit-dirty=true",
+    "deploy": "npm run worker:deploy && npm run pages:deploy"
   },
   "devDependencies": {
     "wrangler": "^4.90.1"
