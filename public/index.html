@@ -399,6 +399,11 @@ function renderQueue(){
 function loadItem(i){activeIdx=i;renderResult(queue[i]);renderQueue();document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}
 document.getElementById('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')analyze();});
 loadSettings();
+const initialTicker = new URLSearchParams(window.location.search).get('ticker');
+if(initialTicker){
+  document.getElementById('ticker').value=initialTicker.toUpperCase().replace(/[^A-Z0-9.^-]/g,'').slice(0,10);
+  setTimeout(analyze,250);
+}
 
 </script>
 </body>

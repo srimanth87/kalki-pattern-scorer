@@ -1,5 +1,6 @@
 const ALLOWED_ORIGINS = [
   'https://kalki-pattern-scorer-ui.pages.dev',
+  'https://kalki-screener.pages.dev',
   'https://srimanth87.github.io',
 ];
 
