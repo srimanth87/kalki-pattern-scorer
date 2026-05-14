@@ -29,7 +29,7 @@ kalki-pattern-scorer      Worker API, deploys src/worker.js
 kalki-pattern-scorer-ui   Pages UI, publishes public/
 ```
 
-Cloudflare Pages is connected to GitHub through Cloudflare's own Pages build flow. This repo also uses GitHub Actions to deploy the Worker whenever `main` is pushed.
+GitHub Actions deploys both the Worker and the Cloudflare Pages UI whenever `main` is pushed.
 
 Required GitHub repo secrets:
 
@@ -42,7 +42,7 @@ After those are added in GitHub, pushing to `main` deploys:
 
 ```text
 src/worker.js       -> kalki-pattern-scorer Worker, via GitHub Actions
-public/index.html   -> kalki-pattern-scorer-ui Pages, via Cloudflare Pages Git build
+public/index.html   -> kalki-pattern-scorer-ui Pages, via GitHub Actions
 ```
 
 Last GitHub Actions deploy test: 2026-05-13 14:07 EDT.
