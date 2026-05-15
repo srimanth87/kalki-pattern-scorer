@@ -218,6 +218,7 @@ function qgc(g){if(!g)return 'qg-b';if(g==='A+'||g==='A')return 'qg-a';if(g==='B
 function fmt(n){if(n==null)return '—';return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function pct(n){return `${n>=0?'+':''}${n.toFixed(1)}%`;}
 function htmlEscape(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function setLoading(on,msg){document.getElementById('loadingEl').classList.toggle('on',on);document.getElementById('loadingTxt').textContent=msg||'Analyzing...';document.getElementById('analyzeBtn').disabled=on;}
 function showErr(msg){const e=document.getElementById('errBox');e.textContent=msg;e.classList.add('on');}
 function clearErr(){document.getElementById('errBox').classList.remove('on');}
@@ -253,7 +254,7 @@ async function analyze(){
     if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||err.error||`Worker error ${res.status}`);}
     const data=await res.json();
     if(!data.ok)throw new Error(data.error||'Unknown error');
-    const item={ticker,tf,note,result:data.result};
+    const item={ticker,tf,note,result:data.result,tradePlan:parseTradePlan(note,ticker)};
     queue.unshift(item);activeIdx=0;
     setLoading(false);clearErr();
     renderResult(item);renderQueue();
@@ -266,6 +267,7 @@ async function analyze(){
 
 function renderResult(item){
   const r=item.result,pc=r.price_context||{};
+  const plan=item.tradePlan;
   document.getElementById('results').classList.add('on');
   const ring=document.getElementById('scoreRing');
   ring.className='score-ring '+gc(r.grade);
@@ -276,20 +278,21 @@ function renderResult(item){
   const sm={forming:'b-forming',breakout:'b-breakout',confirmed:'b-confirmed',failed:'b-failed'};
   document.getElementById('bdgWrap').innerHTML=`<span class="badge ${sm[r.pattern_stage]||'b-forming'}">${r.pattern_stage||'—'}</span><span class="badge b-tf">${r.timeframe||item.tf}</span>`;
   document.getElementById('summDisp').textContent=r.summary||'';
-  const entry=Number(pc.current)||0;
-  const stop=Number(pc.support)||0;
-  const t1=Number(pc.resistance)||0;
-  const t2=Number(pc.target)||0;
+  const entry=plan?.entryMid||Number(pc.current)||0;
+  const stop=plan?.stop||Number(pc.support)||0;
+  const targets=plan?.targets?.length?plan.targets:[Number(pc.resistance)||0,Number(pc.target)||0];
+  const t1=targets[0]||0;
+  const t2=targets[1]||0;
   const stopPct=entry>0?((stop-entry)/entry*100):0;
   const t1Pct=entry>0?((t1-entry)/entry*100):0;
   const t2Pct=entry>0?((t2-entry)/entry*100):0;
   const risk=entry-stop;
   const reward=t1-entry;
   const rr=risk>0?(reward/risk):0;
-  document.getElementById('pCur').textContent=fmt(pc.current);
-  document.getElementById('pSup').textContent=fmt(pc.support);
-  document.getElementById('pRes').textContent=fmt(pc.resistance);
-  document.getElementById('pTgt').textContent=fmt(pc.target);
+  document.getElementById('pCur').textContent=plan?.entryText||fmt(entry);
+  document.getElementById('pSup').textContent=fmt(stop);
+  document.getElementById('pRes').textContent=fmt(t1);
+  document.getElementById('pTgt').textContent=fmt(t2);
   document.getElementById('pStopPct').textContent=stop>0?stopPct.toFixed(1)+'%':'—';
   document.getElementById('pStopPct').style.color='var(--red)';
   document.getElementById('pT1Pct').textContent=t1>0?'+'+t1Pct.toFixed(1)+'%':'—';
@@ -305,28 +308,64 @@ function renderResult(item){
 
 function buildTelegramMessage(item){
   const r=item.result,pc=r.price_context||{};
-  const entry=Number(pc.current)||0;
-  const stop=Number(pc.support)||0;
-  const t1=Number(pc.resistance)||0;
-  const t2=Number(pc.target)||0;
+  const plan=item.tradePlan;
+  const entry=plan?.entryMid||Number(pc.current)||0;
+  const entryText=plan?.entryText||fmt(entry);
+  const stop=plan?.stop||Number(pc.support)||0;
+  const targets=plan?.targets?.length?plan.targets:[Number(pc.resistance)||0,Number(pc.target)||0].filter(v=>v>0);
+  const t1=targets[0]||0;
   const risk=entry-stop;
   const rr=risk>0?(t1-entry)/risk:0;
   const stopPct=entry>0?(stop-entry)/entry*100:0;
-  const t1Pct=entry>0?(t1-entry)/entry*100:0;
-  const t2Pct=entry>0?(t2-entry)/entry*100:0;
   const stamp=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
   const when=stamp.replace(',', ' ·').replace(/, /g,' ');
   return [
     `⚡ <b>${htmlEscape(item.ticker)}</b>`,
     `🏆 Grade:  ${r.grade||'—'} · Score: ${r.score??'—'}/10`,
-    `📈 Entry:  ${fmt(entry)}`,
+    `📈 Entry:  ${htmlEscape(entryText)}`,
     `🛑 Stop:   ${fmt(stop)} (${pct(stopPct)})`,
-    `🎯 T1:     ${fmt(t1)} (${pct(t1Pct)})`,
-    `🎯 T2:     ${fmt(t2)} (${pct(t2Pct)})`,
+    ...targets.map((target,i)=>`🎯 T${i+1}:     ${fmt(target)} (${pct(entry>0?(target-entry)/entry*100:0)})`),
     `📊 R:R:    ${rr>0?rr.toFixed(1):'—'}:1`,
     `⏰ ${when}`,
     '⚡ Kalki Analysis Platform',
   ].join('\n');
+}
+
+function parseTradePlan(note,ticker){
+  const source=String(note||'').trim();
+  if(!source)return null;
+  const cleaned=source
+    .replace(new RegExp(`^\\s*\\$?${escapeRegExp(ticker)}\\b[:,\\s-]*`,'i'),'')
+    .replace(/[,$]/g,' ')
+    .replace(/[–—]/g,'-')
+    .trim();
+  const values=[...cleaned.matchAll(/\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?/g)].map(m=>m[0].replace(/\s+/g,''));
+  if(values.length<3)return null;
+  const entry=parseEntryToken(values[0]);
+  if(!entry)return null;
+  const nums=values.slice(1).map(parseNumberToken).filter(v=>v>0);
+  if(nums.length<2)return null;
+  const below=nums.filter(v=>v<entry.mid);
+  const stop=below.length?Math.max(...below):nums[nums.length-1];
+  if(!stop||stop>=entry.mid)return null;
+  const targets=nums.filter(v=>v>entry.mid&&v!==stop).filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b);
+  if(!targets.length)return null;
+  return {entryMid:entry.mid,entryText:entry.text,stop,targets};
+}
+
+function parseEntryToken(token){
+  if(token.includes('-')){
+    const [low,high]=token.split('-').map(parseNumberToken).sort((a,b)=>a-b);
+    if(!low||!high)return null;
+    return {mid:(low+high)/2,text:`${fmt(low)}-${fmt(high)}`};
+  }
+  const value=parseNumberToken(token);
+  return value?{mid:value,text:fmt(value)}:null;
+}
+
+function parseNumberToken(token){
+  const n=Number(String(token).replace(/[^0-9.]/g,''));
+  return Number.isFinite(n)?n:0;
 }
 
 async function sendTelegramAlert(item){
