@@ -55,7 +55,13 @@ Chart data JSON:
 ${JSON.stringify(chart)}
 
 JSON structure to return:
-{"pattern":"<Cup and Handle|Head and Shoulders|Megaphone|Bull Flag|Ascending Triangle|Base Breakout|Double Bottom|Flat Base|Descending Channel|Earnings Gap Breakout|etc>","pattern_stage":"forming|breakout|confirmed|failed","timeframe":"${tfLabel}","score":<1-10>,"grade":"A+|A|B|C|D","price_context":{"current":<num>,"resistance":<num>,"support":<num>,"target":<num>},"bullish_factors":["...","...","..."],"risk_factors":["...","..."],"summary":"2-3 sentences on setup quality and what to watch","invalidation":"one sentence on what invalidates this setup"}
+{"pattern":"<Cup and Handle|Head and Shoulders|Inverse Head and Shoulders|Megaphone|Bull Flag|Ascending Triangle|Base Breakout|Double Bottom|Flat Base|Descending Channel|Earnings Gap Breakout|etc>","pattern_stage":"forming|breakout|confirmed|failed","timeframe":"${tfLabel}","score":<1-10>,"grade":"A+|A|B|C|D","price_context":{"current":<num>,"resistance":<num>,"support":<num>,"target":<num>},"bullish_factors":["...","...","..."],"risk_factors":["...","..."],"summary":"2-3 sentences on setup quality and what to watch","invalidation":"one sentence on what invalidates this setup"}
+
+Pattern classification rules:
+- First evaluate Head and Shoulders / Inverse Head and Shoulders before labeling Double Bottom.
+- If the setup has three swing lows/highs with the middle swing clearly more extreme and price is breaking a neckline, label it "Inverse Head and Shoulders" for bullish breakouts or "Head and Shoulders" for bearish breakdowns.
+- Only label "Double Bottom" when there are two comparable lows and no distinct middle head plus right shoulder structure.
+- If a human alert note names a pattern and the OHLCV structure reasonably supports it, use that pattern name instead of a simpler overlapping label.
 
 Rules for price_context: current must be the latest close/current market price. support MUST be below current. resistance MUST be above current. target MUST be above resistance. If price already broke a prior resistance, do not use that old resistance as resistance; choose the next upside resistance or measured move target.`;
 
