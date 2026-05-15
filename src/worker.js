@@ -79,6 +79,8 @@ Grading rules:
 - B means constructive but with meaningful overhead supply, early reversal risk, or unconfirmed follow-through.
 - C/D means weak, failed, extended, or too close to resistance for good risk/reward.
 - Breakouts from long downtrends should usually start as B/B+ unless they clear the first major weekly resistance with strong volume.
+- Do not grade a valid breakout below B-/5 solely because the weekly trend is down if R:R is above 1.5 and volume/price action confirms accumulation.
+- Weekly downtrend and overhead supply should usually cap a good reversal setup at B/B+, not automatically force C/D.
 
 Rules for price_context: current must be the latest close/current market price. support MUST be below current. resistance MUST be above current. target MUST be above resistance. If price already broke a prior resistance, do not use that old resistance as resistance; choose the next upside resistance or measured move target.`;
 
@@ -287,6 +289,8 @@ function normalizeAnalysisResult(result, chart) {
   };
 
   const stopRiskPct = ((current - support) / current) * 100;
+  const rrRatio = (resistance - current) / (current - support);
+  result.rr_ratio = round(rrRatio);
   result.stop_pct = -round(stopRiskPct);
   if (stopRiskPct > 9) {
     result.risk_factors = [
@@ -295,8 +299,38 @@ function normalizeAnalysisResult(result, chart) {
     ];
     capScore(result, 6);
   }
+  applyScoreGuardrails(result, rrRatio);
 
   return result;
+}
+
+function applyScoreGuardrails(result, rrRatio) {
+  const stage = String(result.pattern_stage || '').toLowerCase();
+  const factors = [
+    ...(Array.isArray(result.bullish_factors) ? result.bullish_factors : []),
+    result.summary || '',
+  ].join(' ').toLowerCase();
+  const hasBreakout = stage === 'breakout' || stage === 'confirmed' || factors.includes('breakout');
+  const hasVolume = factors.includes('volume') || factors.includes('accumulation');
+  const score = Number(result.score);
+
+  if (hasBreakout && hasVolume && rrRatio >= 1.5 && Number.isFinite(score) && score < 5) {
+    result.score = 5;
+    result.grade = gradeForScore(result.score);
+    result.risk_factors = [
+      ...(Array.isArray(result.risk_factors) ? result.risk_factors : []),
+      'Weekly overhead supply limits the grade, but breakout confirmation and acceptable R:R keep the setup above a weak rating.',
+    ];
+  }
+
+  if (rrRatio < 1 && Number.isFinite(score) && score > 5) {
+    result.score = 5;
+    result.grade = gradeForScore(result.score);
+    result.risk_factors = [
+      ...(Array.isArray(result.risk_factors) ? result.risk_factors : []),
+      'R:R to first resistance is below 1:1, so the setup grade is capped.',
+    ];
+  }
 }
 
 function chooseStopSupport(candidate, current, recent) {
