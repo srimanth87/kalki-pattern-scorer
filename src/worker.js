@@ -47,21 +47,38 @@ export default {
       const yticker = { SPX: '%5EGSPC', NDX: '%5ENDX', VIX: '%5EVIX' }[ticker] || ticker;
       const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yticker}?interval=${tf}&range=${range}`;
       const chart = await fetchYahooChart(yahooUrl);
+      const higherTimeframe = tf === '1d'
+        ? await fetchHigherTimeframeChart(yticker)
+        : null;
 
       const prompt = `PATTERN_SCORE_REQUEST: Analyze the ${tfLabel} OHLCV candle data for ${ticker}, identify the chart pattern, and respond with ONLY a raw JSON object (no markdown, no backticks, no explanation before or after).${note ? ` Alert note: "${note}"` : ''}
 
 Yahoo source URL: ${yahooUrl}
 Chart data JSON:
 ${JSON.stringify(chart)}
+${higherTimeframe ? `
+Higher-timeframe context URL: ${higherTimeframe.url}
+Weekly context JSON:
+${JSON.stringify(higherTimeframe.chart)}
+` : ''}
 
 JSON structure to return:
-{"pattern":"<Cup and Handle|Head and Shoulders|Inverse Head and Shoulders|Megaphone|Bull Flag|Ascending Triangle|Base Breakout|Double Bottom|Flat Base|Descending Channel|Earnings Gap Breakout|etc>","pattern_stage":"forming|breakout|confirmed|failed","timeframe":"${tfLabel}","score":<1-10>,"grade":"A+|A|B|C|D","price_context":{"current":<num>,"resistance":<num>,"support":<num>,"target":<num>},"bullish_factors":["...","...","..."],"risk_factors":["...","..."],"summary":"2-3 sentences on setup quality and what to watch","invalidation":"one sentence on what invalidates this setup"}
+{"pattern":"<Cup and Handle|Head and Shoulders|Inverse Head and Shoulders|Low-base Breakout|Base Breakout|Megaphone|Bull Flag|Ascending Triangle|Double Bottom|Flat Base|Descending Channel|Earnings Gap Breakout|etc>","pattern_stage":"forming|breakout|confirmed|failed","timeframe":"${tfLabel}","score":<1-10>,"grade":"A+|A|B|C|D","price_context":{"current":<num>,"resistance":<num>,"support":<num>,"target":<num>},"bullish_factors":["...","...","..."],"risk_factors":["...","..."],"summary":"2-3 sentences on setup quality and what to watch","invalidation":"one sentence on what invalidates this setup"}
 
 Pattern classification rules:
 - First evaluate Head and Shoulders / Inverse Head and Shoulders before labeling Double Bottom.
 - If the setup has three swing lows/highs with the middle swing clearly more extreme and price is breaking a neckline, label it "Inverse Head and Shoulders" for bullish breakouts or "Head and Shoulders" for bearish breakdowns.
 - Only label "Double Bottom" when there are two comparable lows and no distinct middle head plus right shoulder structure.
+- For deeply sold-off stocks still far below major weekly resistance, prefer "Low-base Breakout" or "Inverse Head and Shoulders attempt" over a clean bullish continuation label.
 - If a human alert note names a pattern and the OHLCV structure reasonably supports it, use that pattern name instead of a simpler overlapping label.
+
+Grading rules:
+- Grade the setup quality, not just the size of the current green candle.
+- Use weekly context to penalize heavy overhead supply, persistent downtrends, and nearby resistance.
+- A/A+ requires daily breakout strength AND supportive weekly structure with room to run before major resistance.
+- B means constructive but with meaningful overhead supply, early reversal risk, or unconfirmed follow-through.
+- C/D means weak, failed, extended, or too close to resistance for good risk/reward.
+- Breakouts from long downtrends should usually start as B/B+ unless they clear the first major weekly resistance with strong volume.
 
 Rules for price_context: current must be the latest close/current market price. support MUST be below current. resistance MUST be above current. target MUST be above resistance. If price already broke a prior resistance, do not use that old resistance as resistance; choose the next upside resistance or measured move target.`;
 
@@ -126,6 +143,21 @@ async function sendTelegramAlert(request, corsOrigin) {
   }
 
   return jsonResponse({ ok: true }, 200, corsOrigin);
+}
+
+async function fetchHigherTimeframeChart(yticker) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yticker}?interval=1wk&range=2y`;
+  try {
+    return {
+      url,
+      chart: await fetchYahooChart(url),
+    };
+  } catch (err) {
+    return {
+      url,
+      chart: { error: err.message },
+    };
+  }
 }
 
 async function fetchYahooChart(yahooUrl) {
