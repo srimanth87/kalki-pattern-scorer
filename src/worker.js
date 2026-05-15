@@ -263,11 +263,8 @@ function normalizeAnalysisResult(result, chart) {
   }
 
   const highsAbove = uniqueNumbers(recent.map(c => c.h).filter(v => v > current * 1.002)).sort((a, b) => a - b);
-  const lowsBelow = uniqueNumbers(recent.map(c => c.l).filter(v => v < current * 0.998)).sort((a, b) => b - a);
 
-  const support = positiveNumber(pc.support) && pc.support < current
-    ? pc.support
-    : lowsBelow[0] || current * 0.92;
+  const support = chooseStopSupport(pc.support, current, recent);
 
   let resistance = positiveNumber(pc.resistance) && pc.resistance > current
     ? pc.resistance
@@ -289,7 +286,78 @@ function normalizeAnalysisResult(result, chart) {
     target: round(target),
   };
 
+  const stopRiskPct = ((current - support) / current) * 100;
+  result.stop_pct = -round(stopRiskPct);
+  if (stopRiskPct > 9) {
+    result.risk_factors = [
+      ...(Array.isArray(result.risk_factors) ? result.risk_factors : []),
+      `Stop requires ${round(stopRiskPct)}% risk, which is wider than the preferred swing-trade risk band.`,
+    ];
+    capScore(result, 6);
+  }
+
   return result;
+}
+
+function chooseStopSupport(candidate, current, recent) {
+  const minStop = current * 0.96; // avoid random 1-2% noise stops
+  const idealMaxStop = current * 0.91;
+  const hardMaxStop = current * 0.88;
+  const lowsBelow = uniqueNumbers(recent.map(c => c.l).filter(v => v < current * 0.998)).sort((a, b) => b - a);
+  const swingLows = findSwingLows(recent)
+    .filter(v => v < current * 0.998)
+    .sort((a, b) => b - a);
+  const candidates = uniqueNumbers([
+    positiveNumber(candidate),
+    ...swingLows,
+    ...lowsBelow,
+  ].filter(v => v && v < current));
+
+  const ideal = candidates.find(v => v <= minStop && v >= idealMaxStop);
+  if (ideal) return ideal;
+
+  const technicalButWide = candidates.find(v => v < idealMaxStop && v >= hardMaxStop);
+  if (technicalButWide) return technicalButWide;
+
+  const tooTight = candidates.find(v => v > minStop);
+  if (tooTight) return minStop;
+
+  return current * 0.92;
+}
+
+function findSwingLows(candles) {
+  const lows = [];
+  for (let i = 2; i < candles.length - 2; i += 1) {
+    const low = candles[i].l;
+    if (!positiveNumber(low)) continue;
+    if (
+      low <= candles[i - 1].l &&
+      low <= candles[i - 2].l &&
+      low <= candles[i + 1].l &&
+      low <= candles[i + 2].l
+    ) {
+      lows.push(low);
+    }
+  }
+  return lows;
+}
+
+function capScore(result, maxScore) {
+  const score = Number(result.score);
+  if (Number.isFinite(score) && score > maxScore) {
+    result.score = maxScore;
+  }
+  result.grade = gradeForScore(result.score);
+}
+
+function gradeForScore(score) {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return 'C';
+  if (n >= 9) return 'A+';
+  if (n >= 7) return 'A';
+  if (n >= 5) return 'B';
+  if (n >= 3) return 'C';
+  return 'D';
 }
 
 function positiveNumber(value) {
