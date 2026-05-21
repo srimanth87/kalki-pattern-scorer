@@ -218,6 +218,8 @@ function qgc(g){if(!g)return 'qg-b';if(g==='A+'||g==='A')return 'qg-a';if(g==='B
 function fmt(n){if(n==null)return '—';return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function pct(n){return `${n>=0?'+':''}${n.toFixed(1)}%`;}
 function htmlEscape(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fmtVol(n){const v=Number(n)||0;if(v>=1e9)return (v/1e9).toFixed(1)+'B';if(v>=1e6)return (v/1e6).toFixed(1)+'M';if(v>=1e3)return (v/1e3).toFixed(0)+'K';return v?String(Math.round(v)):'—';}
+function volumeLine(r){const vc=r.volume_context||{};if(!vc.volume&&!vc.volume_ratio)return '';const ratio=Number(vc.volume_ratio);return `📦 Volume: ${fmtVol(vc.volume)}${Number.isFinite(ratio)&&ratio>0?` · ${ratio.toFixed(1)}x avg`:''}`;}
 function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function setLoading(on,msg){document.getElementById('loadingEl').classList.toggle('on',on);document.getElementById('loadingTxt').textContent=msg||'Analyzing...';document.getElementById('analyzeBtn').disabled=on;}
 function showErr(msg){const e=document.getElementById('errBox');e.textContent=msg;e.classList.add('on');}
@@ -326,9 +328,11 @@ function buildTelegramMessage(item){
     `🛑 Stop:   ${fmt(stop)} (${pct(stopPct)})`,
     ...targets.map((target,i)=>`🎯 T${i+1}:     ${fmt(target)} (${pct(entry>0?(target-entry)/entry*100:0)})`),
     `📊 R:R:    ${rr>0?rr.toFixed(1):'—'}:1`,
+    volumeLine(r),
+    `📌 Pattern: ${htmlEscape(r.pattern||'—')}`,
     `⏰ ${when}`,
     '⚡ Kalki Analysis Platform',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function parseTradePlan(note,ticker){

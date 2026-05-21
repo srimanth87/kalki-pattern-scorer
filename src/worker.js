@@ -63,7 +63,7 @@ ${JSON.stringify(higherTimeframe.chart)}
 ` : ''}
 
 JSON structure to return:
-{"pattern":"<Cup and Handle|Head and Shoulders|Inverse Head and Shoulders|Low-base Breakout|Base Breakout|Megaphone|Bull Flag|Ascending Triangle|Double Bottom|Flat Base|Descending Channel|Earnings Gap Breakout|etc>","pattern_stage":"forming|breakout|confirmed|failed","timeframe":"${tfLabel}","score":<1-10>,"grade":"A+|A|B|C|D","price_context":{"current":<num>,"resistance":<num>,"support":<num>,"target":<num>},"bullish_factors":["...","...","..."],"risk_factors":["...","..."],"summary":"2-3 sentences on setup quality and what to watch","invalidation":"one sentence on what invalidates this setup"}
+{"pattern":"<Cup and Handle|Head and Shoulders|Inverse Head and Shoulders|Low-base Breakout|Base Breakout|Megaphone|Bull Flag|Ascending Triangle|Double Bottom|Flat Base|Descending Channel|Earnings Gap Breakout|etc>","pattern_stage":"forming|breakout|confirmed|failed","timeframe":"${tfLabel}","score":<1-10>,"grade":"A+|A|B|C|D","price_context":{"current":<num>,"resistance":<num>,"support":<num>,"target":<num>},"volume_context":{"volume":<latest candle volume>,"avg_volume_20":<20 candle average volume>,"volume_ratio":<latest volume / avg_volume_20>},"bullish_factors":["...","...","..."],"risk_factors":["...","..."],"summary":"2-3 sentences on setup quality and what to watch","invalidation":"one sentence on what invalidates this setup"}
 
 Pattern classification rules:
 - First evaluate Head and Shoulders / Inverse Head and Shoulders before labeling Double Bottom.
@@ -81,6 +81,7 @@ Grading rules:
 - Breakouts from long downtrends should usually start as B/B+ unless they clear the first major weekly resistance with strong volume.
 - Do not grade a valid breakout below B-/5 solely because the weekly trend is down if R:R is above 1.5 and volume/price action confirms accumulation.
 - Weekly downtrend and overhead supply should usually cap a good reversal setup at B/B+, not automatically force C/D.
+- Volume is a breakout confirmation filter: >=2.0x avg is strong, 1.5-2.0x is decent, 1.0-1.5x is only mild, and <1.0x should cap most breakout grades unless weekly structure is exceptional.
 
 Rules for price_context: current must be the latest close/current market price. support MUST be below current. resistance MUST be above current. target MUST be above resistance. If price already broke a prior resistance, do not use that old resistance as resistance; choose the next upside resistance or measured move target.`;
 
@@ -292,6 +293,7 @@ function normalizeAnalysisResult(result, chart) {
   const rrRatio = (resistance - current) / (current - support);
   result.rr_ratio = round(rrRatio);
   result.stop_pct = -round(stopRiskPct);
+  result.volume_context = normalizeVolumeContext(result.volume_context, candles);
   if (stopRiskPct > 9) {
     result.risk_factors = [
       ...(Array.isArray(result.risk_factors) ? result.risk_factors : []),
@@ -312,6 +314,7 @@ function applyScoreGuardrails(result, rrRatio) {
   ].join(' ').toLowerCase();
   const hasBreakout = stage === 'breakout' || stage === 'confirmed' || factors.includes('breakout');
   const hasVolume = factors.includes('volume') || factors.includes('accumulation');
+  const volumeRatio = positiveNumber(result.volume_context?.volume_ratio);
   const score = Number(result.score);
 
   if (hasBreakout && hasVolume && rrRatio >= 1.5 && Number.isFinite(score) && score < 5) {
@@ -331,6 +334,43 @@ function applyScoreGuardrails(result, rrRatio) {
       'R:R to first resistance is below 1:1, so the setup grade is capped.',
     ];
   }
+
+  if (hasBreakout && volumeRatio && volumeRatio < 1 && Number(result.score) > 6) {
+    result.score = 6;
+    result.grade = gradeForScore(result.score);
+    result.risk_factors = [
+      ...(Array.isArray(result.risk_factors) ? result.risk_factors : []),
+      `Breakout volume is only ${round(volumeRatio)}x average, so the setup is capped until participation improves.`,
+    ];
+  }
+
+  if (rrRatio <= 1.1 && (!volumeRatio || volumeRatio < 1.5) && Number(result.score) > 7) {
+    result.score = 7;
+    result.grade = gradeForScore(result.score);
+    result.risk_factors = [
+      ...(Array.isArray(result.risk_factors) ? result.risk_factors : []),
+      'R:R is near 1:1 without strong volume expansion, so the score is capped.',
+    ];
+  }
+}
+
+function normalizeVolumeContext(candidate, candles) {
+  const latest = [...candles].reverse().find(c => positiveNumber(c.v));
+  const recentVolumes = candles
+    .slice(-21, latest === candles[candles.length - 1] ? -1 : undefined)
+    .map(c => positiveNumber(c.v))
+    .filter(Boolean);
+  const fallbackAvg = recentVolumes.length
+    ? recentVolumes.reduce((sum, value) => sum + value, 0) / recentVolumes.length
+    : null;
+  const volume = positiveNumber(candidate?.volume) || positiveNumber(latest?.v);
+  const avgVolume20 = positiveNumber(candidate?.avg_volume_20) || fallbackAvg;
+  const volumeRatio = positiveNumber(candidate?.volume_ratio) || (volume && avgVolume20 ? volume / avgVolume20 : null);
+  return {
+    volume: volume ? Math.round(volume) : null,
+    avg_volume_20: avgVolume20 ? Math.round(avgVolume20) : null,
+    volume_ratio: volumeRatio ? round(volumeRatio) : null,
+  };
 }
 
 function chooseStopSupport(candidate, current, recent) {
